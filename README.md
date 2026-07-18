@@ -6,28 +6,7 @@ berbasis PHP native + Bootstrap 5 — tanpa Docker, tanpa Apache.
 
 ## 1. Arsitektur Sistem
 
-```
-                         Internet
-                            |
-              +-------------+-------------+
-              |                           |
-        (Mode: direct)              (Mode: tunnel/hybrid)
-        Public IP : 80/443          Cloudflare Tunnel (cloudflared)
-              |                           |
-              +-------------+-------------+
-                            |
-                          Nginx  (reverse proxy + static PHP host)
-                            |
-        +-------------------+-------------------+-----------------+
-        |                   |                   |                 |
-   PHP-FPM (per versi)   Node.js (proxy_pass)  phpMyAdmin       Panel
-   7.4/8.0/8.1/8.2/           |               PHP-FPM          PHP-FPM
-   8.3/8.4 -> www-data     127.0.0.1:port                    pool 'panel'
-        |                     |                                  |
-   /var/www/<domain>     PM2 daemon (user: nodeapps)      /opt/server-panel
-                          satu-satunya process manager
-                          Node.js di server ini
-```
+![image](https://i.ibb.co.com/fYkKQzxk/img-github-yuukapanel-xasd.png)
 
 Tiga pilar desain:
 
