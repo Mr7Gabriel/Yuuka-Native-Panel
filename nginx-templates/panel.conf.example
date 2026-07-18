@@ -1,0 +1,40 @@
+# ==============================================================================
+# Contoh konfigurasi Nginx untuk Panel itu sendiri.
+# File aktual dibuat oleh modules/panel.sh (module_panel_nginx_vhost) ke:
+#   /etc/nginx/sites-available/panel-<domain>.conf
+#
+# Panel PHP-FPM berjalan pada pool khusus 'panel' (user sistem terpisah dari
+# www-data), socket /run/php/panel.sock - lihat modules/panel.sh.
+# ==============================================================================
+server {
+    listen 80;
+    listen [::]:80;
+    server_name panel.contoh.com;
+
+    include snippets/acme-challenge.conf;
+    include snippets/cloudflare-realip.conf;
+
+    root /opt/server-panel/public;
+    index index.php;
+
+    access_log /var/log/nginx/panel-panel.contoh.com-access.log;
+    error_log  /var/log/nginx/panel-panel.contoh.com-error.log;
+
+    client_max_body_size 32m;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/panel.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_read_timeout 120;
+    }
+
+    location ~ /\.(?!well-known) { deny all; }
+    location ~* ^/(app|storage|scripts)/ { deny all; }
+
+    include snippets/security-headers.conf;
+}

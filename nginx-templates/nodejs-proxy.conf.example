@@ -1,0 +1,27 @@
+# ==============================================================================
+# Contoh konfigurasi Nginx reverse proxy untuk aplikasi Node.js.
+# File aktual dibuat otomatis oleh NodeService::createApp() ->
+# nginx_build_nodejs_proxy_config() di app/scripts/nginx.php, ditulis ke:
+#   /etc/nginx/sites-available/node-<domain>.conf
+#
+# PM2 tetap menjadi satu-satunya process manager aplikasi - Nginx di sini
+# HANYA meneruskan trafik HTTP ke port lokal yang didaftarkan aplikasi.
+# ==============================================================================
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.contoh.com;
+
+    include snippets/acme-challenge.conf;
+    include snippets/cloudflare-realip.conf;
+
+    access_log /var/log/nginx/app.contoh.com-access.log;
+    error_log  /var/log/nginx/app.contoh.com-error.log;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        include snippets/proxy-params.conf;
+    }
+
+    include snippets/security-headers.conf;
+}

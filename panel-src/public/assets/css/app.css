@@ -1,0 +1,153 @@
+:root {
+  --sidebar-width: 250px;
+  --brand: #4f46e5;
+  --brand-dark: #3730a3;
+}
+
+body {
+  background-color: #f4f6fb;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: var(--sidebar-width);
+  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+  color: #e0e7ff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 1030;
+  transition: transform 0.2s ease;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.25rem 1.25rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: 0.75rem;
+  margin: 0;
+}
+
+.sidebar-nav li a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.5rem;
+  color: #c7d2fe;
+  text-decoration: none;
+  font-size: 0.92rem;
+  margin-bottom: 0.15rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-nav li a:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.sidebar-nav li a.active {
+  background: var(--brand);
+  color: #fff;
+}
+
+.app-main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+.app-content {
+  padding: 1.5rem;
+  flex: 1;
+}
+
+.app-footer {
+  padding: 1rem 1.5rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.stat-card {
+  border: none;
+  border-radius: 0.9rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.stat-card .stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.35rem;
+}
+.status-dot.online, .status-dot.active { background: #22c55e; }
+.status-dot.stopped, .status-dot.inactive { background: #9ca3af; }
+.status-dot.errored, .status-dot.failed { background: #ef4444; }
+.status-dot.launching, .status-dot.activating,
+.status-dot["waiting restart"] { background: #f59e0b; }
+.status-dot.unknown { background: #6b7280; }
+
+.log-viewer {
+  background: #0b1021;
+  color: #d1d5db;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.8rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  max-height: 480px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.secret-value {
+  font-family: monospace;
+}
+
+@media (max-width: 991.98px) {
+  .app-sidebar {
+    transform: translateX(-100%);
+  }
+  .app-sidebar.show {
+    transform: translateX(0);
+  }
+  .app-main {
+    margin-left: 0;
+  }
+}

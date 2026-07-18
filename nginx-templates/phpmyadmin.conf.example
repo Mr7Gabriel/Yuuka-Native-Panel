@@ -1,0 +1,34 @@
+# ==============================================================================
+# Contoh konfigurasi Nginx untuk phpMyAdmin (subdomain mode).
+# File aktual dibuat oleh modules/phpmyadmin.sh (module_phpmyadmin_generate_nginx)
+# ke /etc/nginx/sites-available/pma-<domain>.conf, TANPA dependency Apache.
+# ==============================================================================
+server {
+    listen 80;
+    listen [::]:80;
+    server_name pma.contoh.com;
+
+    include snippets/acme-challenge.conf;
+
+    root /usr/share/phpmyadmin;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php$is_args$args;
+    }
+
+    location ~ ^/(.+\.php)$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ /\. { deny all; }
+    include snippets/security-headers.conf;
+}
+
+# ------------------------------------------------------------------------------
+# Alternatif: mode "path" (https://panel.contoh.com/phpmyadmin) - snippet
+# disertakan lewat: include snippets/includes/phpmyadmin.conf; di dalam server
+# block domain/panel yang dipilih. Lihat modules/phpmyadmin.sh untuk detail.
+# ------------------------------------------------------------------------------

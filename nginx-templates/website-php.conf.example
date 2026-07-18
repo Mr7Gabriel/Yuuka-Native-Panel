@@ -1,0 +1,39 @@
+# ==============================================================================
+# Contoh konfigurasi Nginx untuk website PHP native / multi-versi.
+# File aktual dibuat otomatis oleh panel (NginxService::createWebsite ->
+# nginx_build_php_site_config() di app/scripts/nginx.php) dan ditulis via
+# panel-exec.sh (subcommand nginx-write-config) ke:
+#   /etc/nginx/sites-available/site-<domain>.conf
+# ==============================================================================
+server {
+    listen 80;
+    listen [::]:80;
+    server_name contoh.com;
+
+    include snippets/acme-challenge.conf;
+    include snippets/cloudflare-realip.conf;
+
+    root /var/www/contoh.com/public;
+    index index.php index.html;
+
+    access_log /var/log/nginx/contoh.com-access.log;
+    error_log  /var/log/nginx/contoh.com-error.log;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ /\.(?!well-known) { deny all; }
+
+    include snippets/security-headers.conf;
+}
+
+# Setelah SSL diterbitkan (SSLService via certbot), tambahkan blok 443 terpisah
+# (lihat app/scripts/nginx.php::nginx_build_ssl_server_block) dan redirect
+# blok 80 di atas ke https.

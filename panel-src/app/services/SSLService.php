@@ -1,0 +1,42 @@
+<?php
+declare(strict_types=1);
+
+final class SSLService
+{
+    public static function issueForDomain(string $domain, string $email, ?int $userId): void
+    {
+        if (!Validator::domain($domain)) {
+            throw new InvalidArgumentException('Domain tidak valid');
+        }
+        if (!Validator::email($email)) {
+            throw new InvalidArgumentException('Email tidak valid');
+        }
+
+        $result = Executor::run('certbot-issue', [$domain, $email], null, 90);
+        if (!$result['ok']) {
+            throw new RuntimeException('Penerbitan SSL gagal (pastikan DNS domain sudah mengarah ke server ini): ' . $result['output']);
+        }
+
+        Database::app()->prepare('UPDATE domains SET ssl_enabled = 1 WHERE domain = :d')->execute(['d' => $domain]);
+        Database::app()->prepare('UPDATE websites SET ssl_enabled = 1 WHERE domain = :d')->execute(['d' => $domain]);
+
+        ActivityLog::record($userId, 'ssl.issue', "SSL diterbitkan untuk {$domain}");
+    }
+
+    public static function removeCertificate(string $domain, ?int $userId): void
+    {
+        if (!Validator::domain($domain)) {
+            throw new InvalidArgumentException('Domain tidak valid');
+        }
+
+        $result = Executor::run('certbot-remove', [$domain], null, 30);
+        if (!$result['ok']) {
+            throw new RuntimeException('Gagal menghapus sertifikat: ' . $result['output']);
+        }
+
+        Database::app()->prepare('UPDATE domains SET ssl_enabled = 0 WHERE domain = :d')->execute(['d' => $domain]);
+        Database::app()->prepare('UPDATE websites SET ssl_enabled = 0 WHERE domain = :d')->execute(['d' => $domain]);
+
+        ActivityLog::record($userId, 'ssl.remove', "SSL dihapus untuk {$domain}");
+    }
+}
