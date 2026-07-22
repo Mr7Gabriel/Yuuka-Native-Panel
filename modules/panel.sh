@@ -24,6 +24,14 @@ module_panel_deploy_files() {
     find "$PANEL_ROOT" -type f -exec chmod 640 {} \;
     chmod 750 "${PANEL_ROOT}/scripts/panel-exec.sh" 2>/dev/null || true
 
+    # Nginx workers run as www-data, not panel - without this, group-only
+    # 750/640 permissions above leave Nginx unable to even stat() the
+    # document root (try_files runs in the Nginx worker, not in the
+    # panel-user PHP-FPM pool), causing a hard 404 on every request.
+    if id www-data &>/dev/null; then
+        usermod -a -G panel www-data
+    fi
+
     log_ok "File panel di-deploy ke ${PANEL_ROOT}"
     state_mark "panel:deployed"
 }

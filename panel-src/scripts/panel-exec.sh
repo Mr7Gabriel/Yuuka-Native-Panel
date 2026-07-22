@@ -163,7 +163,14 @@ op_nginx_delete() {
 # PM2 / Node.js operations - always executed as the 'nodeapps' user
 # ---------------------------------------------------------------------------
 as_nodeapps() {
-    runuser -u nodeapps -- bash -lc "export NVM_DIR='${NODEAPPS_HOME}/.nvm'; [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"; $*"
+    # cd into a directory 'nodeapps' can always access first: this process
+    # inherits whatever cwd panel-exec.sh itself was started with (which may
+    # be root-owned and unreadable by 'nodeapps', e.g. an operator's shell
+    # cwd during manual debugging, or an unrelated PHP-FPM worker cwd). If
+    # left inherited, Node/libuv's child-process setup fails to resolve the
+    # working directory and PM2 reports this as a misleading "spawn EACCES"
+    # that looks like a permission problem on the node binary itself.
+    runuser -u nodeapps -- bash -lc "cd '${NODEAPPS_HOME}' && export NVM_DIR='${NODEAPPS_HOME}/.nvm'; [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"; $*"
 }
 
 op_pm2_deploy() {

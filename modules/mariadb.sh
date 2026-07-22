@@ -57,6 +57,17 @@ SQL
 module_mariadb_create_accounts() {
     log_step "Membuat akun database untuk Panel & Administrator"
 
+    if state_has "mariadb:accounts_created"; then
+        log_ok "Akun database panel sudah pernah dibuat sebelumnya, lewati (password tidak diubah)"
+        # Downstream steps (panel.sh) only need these when .env doesn't exist
+        # yet; on a re-run .env is already present and never overwritten, so
+        # leaving these unset here is safe.
+        PANEL_APP_DB_NAME="server_panel"
+        PANEL_APP_DB_USER="panel_app"
+        export PANEL_APP_DB_NAME PANEL_APP_DB_USER
+        return 0
+    fi
+
     PANEL_DB_PROVISIONER_USER="panel_provisioner"
     PANEL_DB_PROVISIONER_PASS="$(generate_password)"
     PANEL_APP_DB_NAME="server_panel"
