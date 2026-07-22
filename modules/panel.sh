@@ -173,6 +173,7 @@ LOG_PATH=${PANEL_ROOT}/storage/logs
 BACKUP_PATH=${PANEL_ROOT}/storage/backups
 
 FILEMANAGER_MAX_UPLOAD_MB=100
+APP_INSTALLER_MAX_DOWNLOAD_MB=200
 EOF
 
     chown panel:panel "$env_file"

@@ -121,9 +121,31 @@ module_mariadb_import_schema() {
     state_mark "mariadb:schema_imported"
 }
 
+# Applies every file under sql/migrations/ - unlike module_mariadb_import_schema
+# (which only ever runs on a fresh DB, gated by state_has), this runs on
+# EVERY install.sh execution and every `yp repair panel`. Each migration
+# file is expected to be idempotent on its own (CREATE TABLE IF NOT EXISTS,
+# etc.) so there is no separate state tracking of which migrations already
+# ran - this keeps a single source of truth instead of a schema.sql copy
+# and a migrations copy drifting apart over time.
+module_mariadb_run_migrations() {
+    log_step "Menerapkan migrasi skema tambahan"
+    local dir="${SCRIPT_DIR}/sql/migrations"
+    if [[ ! -d "$dir" ]]; then
+        log_ok "Tidak ada migrasi tambahan"
+        return 0
+    fi
+    local f
+    for f in "$dir"/*.sql; do
+        [[ -e "$f" ]] || continue
+        spinner_run "Migrasi: $(basename "$f")" -- mysql -u root "$PANEL_APP_DB_NAME" < "$f"
+    done
+}
+
 module_mariadb_run_all() {
     module_mariadb_install
     module_mariadb_secure
     module_mariadb_create_accounts
     module_mariadb_import_schema
+    module_mariadb_run_migrations
 }

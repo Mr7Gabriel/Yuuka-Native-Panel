@@ -340,6 +340,7 @@ LOG_PATH=${PANEL_ROOT}/storage/logs
 BACKUP_PATH=${PANEL_ROOT}/storage/backups
 
 FILEMANAGER_MAX_UPLOAD_MB=100
+APP_INSTALLER_MAX_DOWNLOAD_MB=200
 EOF
     chown panel:panel "$PANEL_ENV"
     chmod 600 "$PANEL_ENV"
@@ -348,6 +349,17 @@ EOF
 
 cmd_repair_panel() {
     log_step "Perbaiki Panel"
+
+    log_info "Menerapkan migrasi skema database tambahan..."
+    local mf
+    for mf in "${INSTALLER_DIR}/sql/migrations"/*.sql; do
+        [[ -e "$mf" ]] || continue
+        if mysql_root "$PANEL_DB_NAME" < "$mf"; then
+            log_ok "Migrasi diterapkan: $(basename "$mf")"
+        else
+            log_warn "Migrasi gagal/dilewati: $(basename "$mf")"
+        fi
+    done
 
     if [[ ! -f "$PANEL_ENV" ]]; then
         log_warn ".env tidak ditemukan di ${PANEL_ENV}"

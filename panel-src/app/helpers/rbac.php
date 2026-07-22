@@ -24,6 +24,9 @@ final class Rbac
         'website.toggle'                => [self::ROLE_ADMIN, self::ROLE_OPERATOR],
         'website.view'                  => [self::ROLE_ADMIN, self::ROLE_OPERATOR, self::ROLE_DEVELOPER, self::ROLE_VIEWER],
 
+        'apps.install'                  => [self::ROLE_ADMIN, self::ROLE_OPERATOR],
+        'apps.view'                     => [self::ROLE_ADMIN, self::ROLE_OPERATOR, self::ROLE_DEVELOPER, self::ROLE_VIEWER],
+
         'nodejs.create'                 => [self::ROLE_ADMIN, self::ROLE_OPERATOR, self::ROLE_DEVELOPER],
         'nodejs.delete'                 => [self::ROLE_ADMIN, self::ROLE_OPERATOR],
         'nodejs.control'                => [self::ROLE_ADMIN, self::ROLE_OPERATOR, self::ROLE_DEVELOPER],
