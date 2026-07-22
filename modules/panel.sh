@@ -124,6 +124,29 @@ php_admin_value[error_log] = ${PANEL_ROOT}/storage/logs/php-fpm-error.log
 php_admin_flag[log_errors] = on
 EOF
 
+    # Some php-fpm package builds ship ProtectSystem=full (or stricter) on
+    # the systemd unit itself, which mounts /etc (among others) read-only
+    # inside a private mount namespace for the service AND every process
+    # it spawns - INCLUDING panel-exec.sh invoked via sudo from a PHP-FPM
+    # worker (sudo elevates uid/gid but does not escape the mount
+    # namespace it inherited). Without this override, every panel
+    # operation that writes under /etc (Nginx vhost create/enable/disable,
+    # cron job create, Certbot certificate issuance) fails with a
+    # confusing "Read-only file system" error - even though the exact same
+    # panel-exec.sh command succeeds when run directly from an interactive
+    # root shell, which was never inside that namespace to begin with.
+    # A systemd drop-in (not editing the vendor unit file, which package
+    # updates would overwrite) re-opens exactly the /etc subpaths the
+    # panel needs, leaving the rest of ProtectSystem=full's hardening
+    # intact.
+    local dropin_dir="/etc/systemd/system/php${PHP_DEFAULT_VERSION}-fpm.service.d"
+    mkdir -p "$dropin_dir"
+    write_file_if_changed "${dropin_dir}/panel-write-paths.conf" <<'EOF'
+[Service]
+ReadWritePaths=/etc/nginx /etc/cron.d /etc/letsencrypt
+EOF
+    systemctl daemon-reload
+
     systemctl restart "php${PHP_DEFAULT_VERSION}-fpm"
     log_ok "Pool 'panel' aktif pada php${PHP_DEFAULT_VERSION}-fpm (${PANEL_POOL_SOCK})"
     state_mark "panel:fpm_pool"
