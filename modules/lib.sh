@@ -242,8 +242,12 @@ service_active() {
 
 service_enable_now() {
     local svc="$1"
-    if service_exists "$svc"; then
-        systemctl enable "$svc" >>"$INSTALL_LOG_FILE" 2>&1 || true
+    # Try enable+start directly instead of gating on service_exists: right
+    # after a unit file is written and daemon-reload runs, `systemctl
+    # list-unit-files` can still miss it, causing a false "tidak ditemukan"
+    # even though the unit is perfectly usable. `systemctl enable` itself
+    # is the authoritative check - it fails loudly if the unit is unknown.
+    if systemctl enable "$svc" >>"$INSTALL_LOG_FILE" 2>&1; then
         systemctl start "$svc" >>"$INSTALL_LOG_FILE" 2>&1 || true
         if service_active "$svc"; then
             log_ok "Service $svc aktif"
@@ -251,7 +255,7 @@ service_enable_now() {
             log_warn "Service $svc tidak aktif, cek dengan: systemctl status $svc"
         fi
     else
-        log_warn "Service $svc tidak ditemukan"
+        log_warn "Service $svc tidak ditemukan atau gagal di-enable, cek dengan: systemctl status $svc"
     fi
 }
 

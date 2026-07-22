@@ -6,7 +6,11 @@
 # ==============================================================================
 
 CLOUDFLARED_CRED_DIR="/etc/cloudflared"
-CLOUDFLARED_TOKEN_FILE="${CLOUDFLARED_CRED_DIR}/tunnel.token"
+# Stored in KEY=VALUE form so it can be loaded directly via systemd's
+# EnvironmentFile= (cloudflared reads the token from the TUNNEL_TOKEN env
+# var natively - see module_cloudflare_install_service for why this is
+# necessary instead of `--token $(cat ...)`).
+CLOUDFLARED_TOKEN_FILE="${CLOUDFLARED_CRED_DIR}/tunnel.env"
 
 module_cloudflare_install_binary() {
     log_step "Install cloudflared"
@@ -33,7 +37,13 @@ module_cloudflare_install_binary() {
 }
 
 # Stores the tunnel token with restrictive permissions. Never logged, never
-# echoed, never written to the panel database.
+# echoed, never written to the panel database. Written as a systemd
+# EnvironmentFile (KEY=VALUE) rather than a bare value, because systemd's
+# ExecStart= is NOT executed through a shell - `--token $(cat file)` is
+# never expanded by systemd and silently breaks (systemd instead tries to
+# parse "$(cat" as one of its own %-specifier/variable references).
+# EnvironmentFile= + a bare `tunnel run` (cloudflared reads TUNNEL_TOKEN
+# from its environment automatically) is the correct native mechanism.
 module_cloudflare_store_token() {
     local token="$1"
 
@@ -41,7 +51,7 @@ module_cloudflare_store_token() {
     chmod 700 "$CLOUDFLARED_CRED_DIR"
 
     umask 077
-    printf '%s' "$token" > "$CLOUDFLARED_TOKEN_FILE"
+    printf 'TUNNEL_TOKEN=%s\n' "$token" > "$CLOUDFLARED_TOKEN_FILE"
     umask 022
 
     chown root:root "$CLOUDFLARED_TOKEN_FILE"
@@ -60,7 +70,8 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token \$(cat ${CLOUDFLARED_TOKEN_FILE})
+EnvironmentFile=${CLOUDFLARED_TOKEN_FILE}
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run
 Restart=on-failure
 RestartSec=5
 User=root

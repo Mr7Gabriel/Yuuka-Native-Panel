@@ -4,8 +4,8 @@ declare(strict_types=1);
 /**
  * Reads Cloudflare Tunnel status live from systemd/cloudflared. Never
  * reads or displays the tunnel token - the token lives only at
- * /etc/cloudflared/tunnel.token (600, root-owned) and is never touched
- * by the panel application layer.
+ * /etc/cloudflared/tunnel.env (600, root-owned, loaded by systemd via
+ * EnvironmentFile=) and is never touched by the panel application layer.
  */
 final class CloudflareService
 {

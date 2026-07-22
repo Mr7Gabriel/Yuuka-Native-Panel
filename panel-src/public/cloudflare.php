@@ -38,7 +38,7 @@ include __DIR__ . '/partials/header.php';
 
 <div class="alert alert-info">
   <strong>Mode deployment saat ini:</strong> <?= e($deploymentMode) ?>.
-  Token tunnel tidak pernah ditampilkan di sini demi keamanan - token tersimpan di <code>/etc/cloudflared/tunnel.token</code> dengan permission 600.
+  Token tunnel tidak pernah ditampilkan di sini demi keamanan - token tersimpan di <code>/etc/cloudflared/tunnel.env</code> dengan permission 600.
 </div>
 
 <div class="row g-3">
