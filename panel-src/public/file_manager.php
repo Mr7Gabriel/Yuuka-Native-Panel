@@ -8,6 +8,57 @@ $user = Auth::user();
 $scope = (string) ($_GET['scope'] ?? $_POST['scope'] ?? '');
 $name = (string) ($_GET['name'] ?? $_POST['name'] ?? '');
 
+// Accessed straight from the sidebar (no scope/name yet) - show a picker
+// instead of failing validation, so File Manager doesn't need a website/
+// app row to be clicked first.
+$isPicker = $scope === '' && $name === '' && $_SERVER['REQUEST_METHOD'] === 'GET';
+
+if ($isPicker) {
+    $websites = NginxService::listWebsites();
+    $nodeApps = NodeService::listRegisteredApps();
+
+    $pageTitle = 'File Manager';
+    include __DIR__ . '/partials/header.php';
+    ?>
+    <h4 class="fw-bold mb-1">File Manager</h4>
+    <p class="text-muted mb-4">Pilih website atau aplikasi Node.js yang mau dikelola filenya.</p>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card stat-card">
+          <div class="card-header bg-white fw-semibold"><i class="bi bi-globe2 me-1"></i>Website PHP</div>
+          <div class="list-group list-group-flush">
+            <?php if (empty($websites)): ?>
+              <div class="list-group-item text-muted">Belum ada website</div>
+            <?php endif; ?>
+            <?php foreach ($websites as $site): ?>
+              <a class="list-group-item list-group-item-action" href="/file_manager.php?scope=website&name=<?= urlencode($site['domain']) ?>">
+                <i class="bi bi-folder2-open me-1"></i><?= e($site['domain']) ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card stat-card">
+          <div class="card-header bg-white fw-semibold"><i class="bi bi-diagram-3 me-1"></i>Node.js Apps</div>
+          <div class="list-group list-group-flush">
+            <?php if (empty($nodeApps)): ?>
+              <div class="list-group-item text-muted">Belum ada aplikasi Node.js</div>
+            <?php endif; ?>
+            <?php foreach ($nodeApps as $app): ?>
+              <a class="list-group-item list-group-item-action" href="/file_manager.php?scope=nodeapp&name=<?= urlencode($app['app_name']) ?>">
+                <i class="bi bi-folder2-open me-1"></i><?= e($app['app_name']) ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+    <?php
+    include __DIR__ . '/partials/footer.php';
+    exit;
+}
+
 try {
     FileManagerService::assertScope($scope, $name);
 } catch (InvalidArgumentException $e) {

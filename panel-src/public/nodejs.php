@@ -22,8 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $port = NodeService::findFreePort() ?? throw new RuntimeException('Tidak ada port kosong tersedia di range 3000-3999');
             }
 
+            // Spasi diganti "_" supaya nama folder deploy (/home/nodeapps/apps/<nama>)
+            // tetap valid tanpa membuat user mengetik ulang - Validator::appName()
+            // di NodeService masih tetap menolak karakter lain yang tidak diizinkan.
+            $appNameInput = (string) preg_replace('/\s+/', '_', trim((string) ($_POST['app_name'] ?? '')));
+
             $app = NodeService::createApp(
-                trim((string) ($_POST['app_name'] ?? '')),
+                $appNameInput,
                 trim((string) ($_POST['domain'] ?? '')),
                 (string) ($_POST['node_version'] ?? ''),
                 $port,
@@ -204,7 +209,8 @@ include __DIR__ . '/partials/header.php';
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Nama Aplikasi (PM2 process name)</label>
-              <input type="text" name="app_name" class="form-control" required pattern="^[a-zA-Z0-9_-]{1,64}$">
+              <input type="text" name="app_name" id="appNameInput" class="form-control" required pattern="^[a-zA-Z0-9_-]{1,64}$">
+              <div class="form-text">Folder deploy: <code id="appNamePathPreview">/home/nodeapps/apps/&lt;nama&gt;</code></div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Domain (opsional)</label>
@@ -284,6 +290,21 @@ include __DIR__ . '/partials/header.php';
   <input type="hidden" name="control" id="ctlAction">
 </form>
 <script>
+(function () {
+  var input = document.getElementById('appNameInput');
+  var preview = document.getElementById('appNamePathPreview');
+  if (!input || !preview) { return; }
+  input.addEventListener('input', function () {
+    var start = input.selectionStart;
+    var sanitized = input.value.replace(/\s+/g, '_');
+    if (sanitized !== input.value) {
+      input.value = sanitized;
+      if (start !== null) { input.setSelectionRange(start, start); }
+    }
+    preview.textContent = '/home/nodeapps/apps/' + (sanitized || '<nama>');
+  });
+})();
+
 function pctl(id, action) {
   document.getElementById('ctlId').value = id;
   document.getElementById('ctlAction').value = action;
