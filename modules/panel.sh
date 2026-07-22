@@ -141,9 +141,16 @@ EOF
     # intact.
     local dropin_dir="/etc/systemd/system/php${PHP_DEFAULT_VERSION}-fpm.service.d"
     mkdir -p "$dropin_dir"
+    # /etc/nginx and /etc/cron.d always exist by this point (nginx.sh and
+    # cron are always installed). /etc/letsencrypt does NOT exist on a
+    # tunnel-mode deployment that never ran Certbot - the "-" prefix marks
+    # it optional, since systemd fails the ENTIRE unit start if any
+    # non-prefixed ReadWritePaths= entry doesn't exist (this exact
+    # oversight took a panel down on a tunnel-mode server before it was
+    # caught and fixed here).
     write_file_if_changed "${dropin_dir}/panel-write-paths.conf" <<'EOF'
 [Service]
-ReadWritePaths=/etc/nginx /etc/cron.d /etc/letsencrypt
+ReadWritePaths=/etc/nginx /etc/cron.d -/etc/letsencrypt
 EOF
     systemctl daemon-reload
 
