@@ -32,10 +32,16 @@ function db_user_create(string $username, string $password): void
         throw new InvalidArgumentException('Nama user database tidak valid');
     }
     $pdo = Database::provisioner();
-    $stmt = $pdo->prepare("CREATE USER IF NOT EXISTS `{$username}`@'localhost' IDENTIFIED BY ?");
-    $stmt->execute([$password]);
-    $stmt2 = $pdo->prepare("ALTER USER `{$username}`@'localhost' IDENTIFIED BY ?");
-    $stmt2->execute([$password]);
+    // CREATE USER/ALTER USER's IDENTIFIED BY clause cannot be bound as a
+    // PDO parameter - MariaDB's server-side prepared statement protocol
+    // does not support account-management statements, so a "?" placeholder
+    // here reaches the server unsubstituted and fails with a syntax error
+    // ("... near '?'"). PDO::quote() safely escapes and quotes the value
+    // for direct interpolation instead, same as identifiers elsewhere in
+    // this file that also cannot be bound.
+    $quotedPassword = $pdo->quote($password);
+    $pdo->exec("CREATE USER IF NOT EXISTS `{$username}`@'localhost' IDENTIFIED BY {$quotedPassword}");
+    $pdo->exec("ALTER USER `{$username}`@'localhost' IDENTIFIED BY {$quotedPassword}");
 }
 
 function db_user_drop(string $username): void
