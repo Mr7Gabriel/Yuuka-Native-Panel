@@ -54,6 +54,32 @@ if ($isPicker) {
         </div>
       </div>
     </div>
+
+    <h6 class="text-muted mt-4 mb-2">Jelajahi Semua (ala Explorer)</h6>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <a href="/file_manager.php?scope=www&name=root" class="card stat-card text-decoration-none text-body">
+          <div class="card-body d-flex align-items-center gap-2">
+            <i class="bi bi-hdd-network fs-4 text-primary"></i>
+            <div>
+              <div class="fw-semibold">Semua Website (/var/www)</div>
+              <div class="text-muted small">Termasuk folder yang belum terdaftar sebagai website di panel</div>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6">
+        <a href="/file_manager.php?scope=nodeapps&name=root" class="card stat-card text-decoration-none text-body">
+          <div class="card-body d-flex align-items-center gap-2">
+            <i class="bi bi-hdd-network fs-4 text-primary"></i>
+            <div>
+              <div class="fw-semibold">Semua Aplikasi Node.js (/home/nodeapps/apps)</div>
+              <div class="text-muted small">Termasuk folder yang belum terdaftar sebagai aplikasi di panel</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
     <?php
     include __DIR__ . '/partials/footer.php';
     exit;
@@ -66,9 +92,16 @@ try {
     redirect($scope === 'nodeapp' ? '/nodejs.php' : '/websites.php');
 }
 
-$backUrl = $scope === 'nodeapp'
-    ? '/nodejs.php'
-    : '/websites.php';
+$isRootScope = FileManagerService::isRootScope($scope);
+if ($isRootScope) {
+    $backUrl = '/file_manager.php';
+    $scopeLabel = 'File Manager';
+    $displayName = $scope === 'nodeapps' ? '/home/nodeapps/apps (semua aplikasi)' : '/var/www (semua website)';
+} else {
+    $backUrl = $scope === 'nodeapp' ? '/nodejs.php' : '/websites.php';
+    $scopeLabel = $scope === 'nodeapp' ? 'Node.js Apps' : 'Website PHP';
+    $displayName = $name;
+}
 
 // Raw file download - must happen before any HTML is emitted.
 if (isset($_GET['download']) && $_GET['download'] !== '') {
@@ -273,8 +306,8 @@ include __DIR__ . '/partials/header.php';
   <div>
     <h4 class="fw-bold mb-0">File Manager</h4>
     <p class="text-muted mb-0">
-      <a href="<?= e($backUrl) ?>"><i class="bi bi-arrow-left me-1"></i><?= $scope === 'nodeapp' ? 'Node.js Apps' : 'Website PHP' ?></a>
-      &middot; <?= e($name) ?>
+      <a href="<?= e($backUrl) ?>"><i class="bi bi-arrow-left me-1"></i><?= e($scopeLabel) ?></a>
+      &middot; <?= e($displayName) ?>
     </p>
   </div>
 </div>

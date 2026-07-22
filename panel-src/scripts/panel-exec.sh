@@ -376,7 +376,7 @@ op_port_check() {
 # (require_path_within), applied to every resolved path before use, exactly
 # like the rest of this script.
 # ---------------------------------------------------------------------------
-RE_FM_SCOPE='^(website|nodeapp)$'
+RE_FM_SCOPE='^(website|nodeapp|www|nodeapps)$'
 FM_MAX_READ_BYTES=209715200  # 200MB hard backstop, independent of the
                              # app-level FILEMANAGER_MAX_UPLOAD_MB cap in
                              # .env - protects PHP-FPM memory even if that
@@ -404,9 +404,16 @@ fm_require_basename() {
 
 fm_owner_for_scope() {
     case "$1" in
-        website) printf 'www-data:www-data' ;;
-        nodeapp) printf 'nodeapps:nodeapps' ;;
+        website|www)      printf 'www-data:www-data' ;;
+        nodeapp|nodeapps) printf 'nodeapps:nodeapps' ;;
     esac
+}
+
+# "www"/"nodeapps" are root-browse scopes (Explorer-style: no specific
+# website/app needs to be picked first, "name" is ignored) - used by the
+# two "Jelajahi semua" entries in the File Manager picker.
+fm_is_root_scope() {
+    [[ "$1" == "www" || "$1" == "nodeapps" ]]
 }
 
 # fm_resolve_base <scope> <name> -> prints absolute (realpath-canonicalized)
@@ -426,6 +433,13 @@ fm_resolve_base() {
             require_match "$name" "$RE_APPNAME" "appname"
             dir="${NODEAPPS_BASE}/${name}"
             resolved=$(require_path_within "$dir" "$NODEAPPS_BASE")
+            ;;
+        www)
+            # Root-browse scope: base IS WWW_BASE itself, "name" ignored.
+            resolved=$(realpath -m -- "$WWW_BASE")
+            ;;
+        nodeapps)
+            resolved=$(realpath -m -- "$NODEAPPS_BASE")
             ;;
         *)
             fail "Scope tidak dikenal: $scope"
@@ -515,6 +529,9 @@ op_files_mkdir() {
 op_files_delete() {
     local scope="$1" name="$2" relpath="$3"
     [[ -n "$relpath" ]] || fail "Refusing to delete scope root"
+    if fm_is_root_scope "$scope" && [[ "$relpath" != */* ]]; then
+        fail "Tidak bisa menghapus folder website/aplikasi lewat mode 'Jelajahi semua' - gunakan menu Hapus Website/Aplikasi supaya database & konfigurasi ikut dibersihkan"
+    fi
     local target
     target=$(fm_resolve_target "$scope" "$name" "$relpath")
     local base
@@ -529,6 +546,9 @@ op_files_rename() {
     local scope="$1" name="$2" relpath="$3" newbasename="$4"
     [[ -n "$relpath" ]] || fail "Path sumber wajib diisi"
     fm_require_basename "$newbasename" "nama baru"
+    if fm_is_root_scope "$scope" && [[ "$relpath" != */* ]]; then
+        fail "Tidak bisa mengganti nama folder website/aplikasi lewat mode 'Jelajahi semua' - itu akan memutus koneksi ke domain/PM2 yang sudah terdaftar"
+    fi
     local target
     target=$(fm_resolve_target "$scope" "$name" "$relpath")
     [[ -e "$target" ]] || fail "Target tidak ditemukan: $relpath"

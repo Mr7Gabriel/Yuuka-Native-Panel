@@ -11,6 +11,7 @@ akses):
 | Dashboard | `dashboard.php` | `monitoring.view` | `SystemService` |
 | Website PHP | `websites.php` | `website.view` | `NginxService` |
 | Node.js Apps | `nodejs.php` | `nodejs.view` | `NodeService`, `EnvService`, `HealthCheckService` |
+| File Manager | `file_manager.php` | `files.view` (tulis: `files.manage`) | `FileManagerService` |
 | Database | `databases.php` | `database.view` | `DatabaseService` |
 | Domain | `domains.php` | `domain.manage` | `DomainService`, `SSLService` |
 | Cron Jobs | `cron.php` | `cron.view` | `CronService` |
@@ -91,6 +92,32 @@ command line). Status: `healthy` / `unhealthy` / `timeout` /
 (`runDueChecks()` — hanya menjalankan yang sudah lewat interval-nya).
 Murni informasional; **PM2 tetap satu-satunya sumber kebenaran** untuk
 apakah proses benar-benar hidup.
+
+## File Manager
+
+`FileManagerService`, akses via sidebar (`/file_manager.php`) atau tombol
+di baris Website PHP/Node.js Apps. Browse/upload/download/edit/rename/
+hapus/upload-ZIP-extract, semua lewat `panel-exec.sh` (`files-*`
+subcommand) karena `panel` tidak bisa baca file milik `www-data`/
+`nodeapps` langsung. Editor teks inline pakai CodeMirror (vendor lokal,
+bukan CDN), auto-pilih mode syntax dari ekstensi file.
+
+Dua mode scope:
+
+- **Per-site/app** (`scope=website|nodeapp`) — dikunci ke satu
+  `document_root`/`project_path` spesifik, dipanggil dari baris
+  Website PHP/Node.js Apps.
+- **Jelajahi Semua** (`scope=www|nodeapps`, ala Explorer) — root langsung
+  ke seluruh `/var/www` atau `/home/nodeapps/apps`, termasuk folder yang
+  belum terdaftar sebagai website/app di panel. Dipilih dari sidebar tanpa
+  perlu klik website/app tertentu dulu.
+
+**Proteksi khusus mode Jelajahi Semua**: hapus dan rename **ditolak** untuk
+entri level-teratas (folder website/app itu sendiri) — mencegah situs
+terhapus lewat File Manager tanpa lewat alur "Hapus Website"/"Hapus
+Aplikasi" yang semestinya (yang juga membersihkan baris database & config
+Nginx/PM2 terkait). File/folder **di dalam** situs tetap bebas dikelola di
+kedalaman berapa pun.
 
 ## Database
 

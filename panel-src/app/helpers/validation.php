@@ -141,7 +141,16 @@ final class Validator
     /** website | nodeapp - the two File Manager scopes */
     public static function fileManagerScope(string $value): bool
     {
-        return in_array($value, ['website', 'nodeapp'], true);
+        // "www" / "nodeapps" are Explorer-style root-browse scopes covering
+        // the entire document-root / node-app base directory at once, not
+        // scoped to one specific website/app - see FileManagerService.
+        return in_array($value, ['website', 'nodeapp', 'www', 'nodeapps'], true);
+    }
+
+    /** website|nodeapp scoped to one specific site/app, or www|nodeapps to browse everything. */
+    public static function fileManagerRootScope(string $value): bool
+    {
+        return in_array($value, ['www', 'nodeapps'], true);
     }
 
     public static function sitename(string $value): bool

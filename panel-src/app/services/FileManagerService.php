@@ -14,11 +14,19 @@ final class FileManagerService
     private const SCOPE_WEBSITE = 'website';
     private const SCOPE_NODEAPP = 'nodeapp';
 
-    /** @return array{scope:string,name:string} validated scope/name pair */
+    /**
+     * @return array{scope:string,name:string} validated scope/name pair.
+     * For root-browse scopes (www/nodeapps) "name" is a fixed placeholder
+     * ("root") and carries no meaning - the base directory is the entire
+     * document-root / node-app base, not one specific site/app.
+     */
     public static function assertScope(string $scope, string $name): array
     {
         if (!Validator::fileManagerScope($scope)) {
             throw new InvalidArgumentException('Scope File Manager tidak dikenal');
+        }
+        if (Validator::fileManagerRootScope($scope)) {
+            return ['scope' => $scope, 'name' => 'root'];
         }
         if ($scope === self::SCOPE_WEBSITE && !Validator::domain($name)) {
             throw new InvalidArgumentException('Domain tidak valid');
@@ -27,6 +35,11 @@ final class FileManagerService
             throw new InvalidArgumentException('Nama aplikasi tidak valid');
         }
         return ['scope' => $scope, 'name' => $name];
+    }
+
+    public static function isRootScope(string $scope): bool
+    {
+        return Validator::fileManagerRootScope($scope);
     }
 
     private static function assertPath(string $relPath): void
