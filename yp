@@ -14,6 +14,13 @@ INSTALLER_DIR="/opt/yuuka-installer"
 PANEL_ROOT="/opt/server-panel"
 PANEL_ENV="${PANEL_ROOT}/.env"
 
+# modules/lib.sh's ask()/ask_secret()/confirm() branch on this (set by
+# install.sh/update.sh in the full-install flow); 'yp' runs those same
+# module functions standalone, so it needs the same default or `set -u`
+# aborts the moment any of them is touched.
+NONINTERACTIVE="${NONINTERACTIVE:-0}"
+export NONINTERACTIVE
+
 if [[ "${EUID}" -ne 0 ]]; then
     echo "yp harus dijalankan sebagai root (gunakan: sudo yp ...)" >&2
     exit 1
@@ -485,16 +492,27 @@ cmd_custom_build() {
             source "${INSTALLER_DIR}/modules/php.sh"
             # shellcheck source=/dev/null
             source "${INSTALLER_DIR}/modules/phpmyadmin.sh"
-            module_phpmyadmin_run_all
 
+            # Must run BEFORE module_phpmyadmin_run_all: module_phpmyadmin_configure
+            # (called from it) writes config.inc.php's SignonURL using
+            # $PANEL_DOMAIN directly, so it has to already be set - unlike
+            # install.sh's flow (where PANEL_DOMAIN is asked/exported at the
+            # very start, long before phpMyAdmin is touched), 'yp custom-build'
+            # only has this one module in isolation.
             local vhost domain phpfpm ver
             vhost=$(panel_vhost_file)
             domain=$(grep -h 'server_name' "${vhost:-/dev/null}" 2>/dev/null | head -1 | awk '{print $2}' | tr -d ';')
             if [[ -z "$domain" ]]; then
-                log_warn "Tidak bisa mendeteksi domain panel - lewati konfigurasi Nginx/pool phpMyAdmin (jalankan 'sudo bash install.sh' tahap 8 manual kalau perlu)"
+                log_warn "Tidak bisa mendeteksi domain panel - SignonURL di config.inc.php mungkin tidak valid (jalankan 'sudo bash install.sh' tahap 8 manual kalau perlu)"
+            fi
+            PANEL_DOMAIN="$domain"
+            export PANEL_DOMAIN
+
+            module_phpmyadmin_run_all
+
+            if [[ -z "$domain" ]]; then
+                log_warn "Lewati konfigurasi Nginx/pool phpMyAdmin karena domain panel tidak terdeteksi"
             else
-                PANEL_DOMAIN="$domain"
-                export PANEL_DOMAIN
                 phpfpm=$(panel_php_fpm_service)
                 ver="${phpfpm#php}"; ver="${ver%-fpm}"
                 [[ -z "$ver" ]] && ver="8.3"

@@ -284,6 +284,17 @@ module_panel_nginx_vhost() {
 
     local conf_file="${NGINX_SITES_AVAILABLE}/panel-${PANEL_DOMAIN}.conf"
 
+    # phpMyAdmin "path" mode writes this snippet (module_phpmyadmin_generate_nginx
+    # in modules/phpmyadmin.sh) but never touches the panel vhost itself -
+    # since THIS function rewrites the panel vhost from scratch on every
+    # install/update/repair, wiring it in here (instead of requiring a
+    # manual `include` edit that a future regen would silently wipe) is
+    # what makes it survive repeated 'yp repair panel' runs.
+    local pma_include=""
+    if [[ -f "${NGINX_SNIPPETS}/includes/phpmyadmin.conf" ]]; then
+        pma_include="    include ${NGINX_SNIPPETS}/includes/phpmyadmin.conf;"
+    fi
+
     write_file_if_changed "$conf_file" <<EOF
 server {
     listen 80;
@@ -315,6 +326,7 @@ server {
     location ~ /\.(?!well-known) { deny all; }
     location ~* ^/(app|storage|scripts)/ { deny all; }
 
+${pma_include}
     include ${NGINX_SNIPPETS}/security-headers.conf;
 }
 EOF

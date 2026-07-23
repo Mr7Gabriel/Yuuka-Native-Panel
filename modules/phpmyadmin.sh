@@ -248,7 +248,7 @@ location ^~ /phpmyadmin/ {
     fi
 
     if [[ "$access_mode" == "path" ]]; then
-        log_warn "Mode 'path' butuh langkah manual: tambahkan 'include snippets/includes/phpmyadmin.conf;' ke server block yang diinginkan (mis. vhost panel), lalu 'sudo nginx -t && sudo systemctl reload nginx' - tanpa ini phpMyAdmin belum benar-benar bisa diakses."
+        log_warn "Mode 'path' butuh vhost panel di-regenerasi supaya menyertakan snippet ini - jalankan 'sudo yp repair panel' sekali lagi setelah ini (otomatis, tidak perlu edit nginx manual)."
     fi
 
     state_mark "phpmyadmin:nginx_generated"
