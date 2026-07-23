@@ -33,6 +33,32 @@ final class WordpressInstallerService
         return ['bytes' => $bytes, 'version' => (string) $data['offers'][0]['version']];
     }
 
+    /**
+     * Downloads a specific (admin-chosen) WordPress version instead of
+     * "latest". $version is client-supplied, so this is the one deliberate,
+     * narrowly-scoped exception to "every URL is a literal constant" (see
+     * AppCatalog's class doc): wordpress.org's release-archive naming
+     * (wordpress-X.Y.Z.zip on the fixed host wordpress.org) has been
+     * stable for over a decade, and the regex below only ever allows
+     * digits and dots - no '/', '@', ':', or scheme, so it cannot redirect
+     * the request to a different host or path no matter what an attacker
+     * passes in. If validation fails this throws rather than silently
+     * falling back to "latest", so a typo never surprises the admin with
+     * the wrong version being installed.
+     *
+     * @return array{bytes:string,version:string}
+     */
+    public static function downloadSpecificVersion(string $version): array
+    {
+        if (!preg_match('/^\d{1,2}\.\d{1,2}(\.\d{1,3})?$/', $version)) {
+            throw new InvalidArgumentException('Format versi WordPress tidak valid (contoh: 6.4.5)');
+        }
+
+        $url = "https://wordpress.org/wordpress-{$version}.zip";
+        $bytes = AppInstallerService::downloadFixedUrl($url);
+        return ['bytes' => $bytes, 'version' => $version];
+    }
+
     public static function fetchSalts(): string
     {
         $app = AppCatalog::get('wordpress');

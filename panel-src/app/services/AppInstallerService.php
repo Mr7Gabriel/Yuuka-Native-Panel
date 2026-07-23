@@ -30,6 +30,7 @@ final class AppInstallerService
         ?string $dbUser,
         ?string $dbPassword,
         ?string $customZipBytes,
+        ?string $appVersion,
         ?int $userId
     ): array {
         $app = AppCatalog::get($appSlug);
@@ -40,6 +41,30 @@ final class AppInstallerService
 
         if ($tier === AppCatalog::TIER_GENERIC && ($customZipBytes === null || $customZipBytes === '')) {
             throw new InvalidArgumentException('File ZIP wajib diupload untuk Custom App');
+        }
+
+        // Resolve + validate the chosen version's PHP compatibility before
+        // touching the network or creating anything - a mismatch here must
+        // reject cleanly, not produce a site that's broken from the start.
+        // The client-side dropdown already filters incompatible PHP
+        // versions out, but that is only a convenience; it is re-checked
+        // here because nothing server-side may trust it.
+        $versionEntry = null;
+        if (!empty($app['versions'])) {
+            $wantedVersion = $appVersion !== null && $appVersion !== '' ? $appVersion : $app['versions'][0]['version'];
+            $versionEntry = AppCatalog::findVersion($appSlug, $wantedVersion);
+            if ($versionEntry === null) {
+                throw new InvalidArgumentException('Versi aplikasi tidak dikenal');
+            }
+            if (!AppCatalog::phpCompatible($phpVersion, $versionEntry['php_min'], $versionEntry['php_max'])) {
+                throw new InvalidArgumentException(
+                    "{$app['name']} {$versionEntry['label']} butuh PHP {$versionEntry['php_min']}"
+                    . ($versionEntry['php_max'] !== null ? " - {$versionEntry['php_max']}" : '+')
+                    . ", tapi PHP {$phpVersion} dipilih."
+                );
+            }
+        } elseif (isset($app['php_min']) && !AppCatalog::phpCompatible($phpVersion, $app['php_min'], $app['php_max'] ?? null)) {
+            throw new InvalidArgumentException("{$app['name']} butuh PHP {$app['php_min']} ke atas, tapi PHP {$phpVersion} dipilih.");
         }
 
         $needsDb = $app['requires_database'] || $createDatabase;
@@ -96,15 +121,17 @@ final class AppInstallerService
                 };
             }
 
-            $version = $app['version'] ?? null;
+            $version = $versionEntry['version'] ?? null;
             if ($tier === AppCatalog::TIER_GENERIC) {
                 $zipBytes = (string) $customZipBytes;
             } elseif ($appSlug === 'wordpress') {
-                $wpResult = WordpressInstallerService::downloadLatest();
+                $wpResult = ($appVersion !== null && $appVersion !== '')
+                    ? WordpressInstallerService::downloadSpecificVersion($appVersion)
+                    : WordpressInstallerService::downloadLatest();
                 $zipBytes = self::stripSingleRootDir($wpResult['bytes']);
                 $version = $wpResult['version'];
             } else {
-                $zipBytes = self::downloadFixedUrl($app['download_url']);
+                $zipBytes = self::downloadFixedUrl($versionEntry['download_url']);
                 $zipBytes = self::stripSingleRootDir($zipBytes);
             }
 

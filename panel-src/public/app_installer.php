@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dbName = trim((string) ($_POST['db_name'] ?? '')) ?: null;
             $dbUser = trim((string) ($_POST['db_user'] ?? '')) ?: null;
             $dbPassword = (string) ($_POST['db_password'] ?? '') ?: null;
+            $appVersion = trim((string) ($_POST['app_version'] ?? '')) ?: null;
 
             $customZipBytes = null;
             if ($appSlug === 'custom') {
@@ -39,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dbUser,
                 $dbPassword,
                 $customZipBytes,
+                $appVersion,
                 $user['id']
             );
 
@@ -94,8 +96,10 @@ include __DIR__ . '/partials/header.php';
           <div>
             <div class="fw-semibold"><?= e($app['name']) ?></div>
             <span class="badge <?= e($tierBadge[$app['tier']]) ?>"><?= e($tierLabel[$app['tier']]) ?></span>
-            <?php if (!empty($app['version'])): ?>
-              <span class="text-muted small">v<?= e($app['version']) ?></span>
+            <?php if (!empty($app['versions'])): ?>
+              <span class="text-muted small"><?= count($app['versions']) > 1 ? 'Pilih versi saat instal' : 'v' . e($app['versions'][0]['version']) ?></span>
+            <?php elseif ($slug === 'wordpress'): ?>
+              <span class="text-muted small">Otomatis versi terbaru</span>
             <?php endif; ?>
           </div>
         </div>
@@ -106,7 +110,10 @@ include __DIR__ . '/partials/header.php';
                 data-slug="<?= e($slug) ?>"
                 data-name="<?= e($app['name']) ?>"
                 data-tier="<?= e($app['tier']) ?>"
-                data-requires-db="<?= $app['requires_database'] ? '1' : '0' ?>">
+                data-requires-db="<?= $app['requires_database'] ? '1' : '0' ?>"
+                data-versions="<?= e(json_encode($app['versions'] ?? [])) ?>"
+                data-php-min="<?= e($app['php_min'] ?? '') ?>"
+                data-php-max="<?= e($app['php_max'] ?? '') ?>">
           <i class="bi bi-download me-1"></i>Instal
         </button>
         <?php endif; ?>
@@ -165,11 +172,22 @@ include __DIR__ . '/partials/header.php';
             </div>
             <div class="col-md-6">
               <label class="form-label">Versi PHP</label>
-              <select name="php_version" class="form-select" required>
+              <select name="php_version" id="installPhpVersionSelect" class="form-select" required>
                 <?php foreach ($phpVersions as $v): ?>
                   <option value="<?= e($v) ?>">PHP <?= e($v) ?></option>
                 <?php endforeach; ?>
               </select>
+              <div class="form-text text-danger d-none" id="installPhpIncompatibleWarning">Tidak ada versi PHP terinstall yang kompatibel dengan pilihan ini.</div>
+            </div>
+
+            <div class="col-md-6" id="installVersionSelectField" style="display:none">
+              <label class="form-label">Versi Aplikasi</label>
+              <select name="app_version" id="installAppVersionSelect" class="form-select"></select>
+            </div>
+            <div class="col-md-6" id="installWpVersionField" style="display:none">
+              <label class="form-label">Versi WordPress (opsional)</label>
+              <input type="text" name="app_version" id="installWpVersionInput" class="form-control" placeholder="Kosongkan = terbaru otomatis" pattern="^\d{1,2}\.\d{1,2}(\.\d{1,3})?$">
+              <div class="form-text">Kosongkan untuk selalu memakai rilis stabil terbaru (direkomendasikan).</div>
             </div>
 
             <div class="col-12" id="installZipField" style="display:none">
@@ -194,7 +212,11 @@ include __DIR__ . '/partials/header.php';
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">Password Database</label>
-                  <input type="password" name="db_password" class="form-control" minlength="8">
+                  <div class="input-group">
+                    <input type="password" name="db_password" id="installDbPassword" class="form-control" minlength="8">
+                    <button type="button" class="btn btn-outline-secondary" data-toggle-password-input="installDbPassword" title="Tampilkan/sembunyikan"><i class="bi bi-eye"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" data-generate-password="installDbPassword" title="Generate password acak"><i class="bi bi-magic"></i></button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,6 +264,40 @@ document.getElementById('installAppModal').addEventListener('show.bs.modal', fun
 
   document.getElementById('installFullTierNote').style.display = (tier === 'full') ? '' : 'none';
 
+  // Multi-version apps (joomla/drupal/phpbb): populate the dropdown from
+  // the button's data-versions JSON (sourced server-side from AppCatalog,
+  // never client-editable). WordPress instead gets a free-text "pick an
+  // exact version" field, since it resolves "latest" dynamically rather
+  // than from a fixed list - see WordpressInstallerService::downloadSpecificVersion().
+  var versions = JSON.parse(btn.getAttribute('data-versions') || '[]');
+  var versionSelectField = document.getElementById('installVersionSelectField');
+  var versionSelect = document.getElementById('installAppVersionSelect');
+  var wpVersionField = document.getElementById('installWpVersionField');
+  var wpVersionInput = document.getElementById('installWpVersionInput');
+
+  versionSelect.innerHTML = '';
+  if (versions.length > 0) {
+    versionSelectField.style.display = '';
+    versionSelect.disabled = false;
+    versions.forEach(function (v) {
+      var opt = document.createElement('option');
+      opt.value = v.version;
+      opt.textContent = v.label + ' (PHP ' + v.php_min + (v.php_max ? '-' + v.php_max : '+') + ')';
+      opt.setAttribute('data-php-min', v.php_min);
+      opt.setAttribute('data-php-max', v.php_max || '');
+      versionSelect.appendChild(opt);
+    });
+  } else {
+    versionSelectField.style.display = 'none';
+    versionSelect.disabled = true;
+  }
+
+  var showWpVersion = (slug === 'wordpress');
+  wpVersionField.style.display = showWpVersion ? '' : 'none';
+  wpVersionInput.disabled = !showWpVersion;
+
+  filterPhpVersionsForApp(btn);
+
   var dbFields = document.getElementById('installDbFields');
   var dbDetailFields = document.getElementById('installDbDetailFields');
   var createDbCheckbox = document.getElementById('installCreateDb');
@@ -270,6 +326,66 @@ document.getElementById('installCreateDb').addEventListener('change', function (
   var show = this.checked;
   dbDetailFields.style.display = show ? '' : 'none';
   dbDetailFields.querySelectorAll('input').forEach(function (el) { el.disabled = !show; });
+});
+
+// Disables <option>s in the "Versi PHP" select that fall outside the
+// currently selected app version's [php_min, php_max] range, so an admin
+// can't submit a combination the server will just reject anyway. This is
+// pure UX convenience - AppInstallerService::installApp() re-validates
+// the same range server-side regardless.
+function filterPhpVersionsForApp(installBtn) {
+  var versionSelect = document.getElementById('installAppVersionSelect');
+  var phpMin, phpMax;
+
+  if (!versionSelect.disabled && versionSelect.selectedOptions.length > 0) {
+    var opt = versionSelect.selectedOptions[0];
+    phpMin = opt.getAttribute('data-php-min');
+    phpMax = opt.getAttribute('data-php-max') || null;
+  } else {
+    phpMin = installBtn.getAttribute('data-php-min') || null;
+    phpMax = installBtn.getAttribute('data-php-max') || null;
+  }
+
+  var phpSelect = document.getElementById('installPhpVersionSelect');
+  var warning = document.getElementById('installPhpIncompatibleWarning');
+  var anyCompatible = false;
+  var firstCompatible = null;
+
+  Array.prototype.forEach.call(phpSelect.options, function (opt) {
+    var compatible = !phpMin || phpVersionCompatible(opt.value, phpMin, phpMax);
+    opt.disabled = !compatible;
+    if (compatible) {
+      anyCompatible = true;
+      if (firstCompatible === null) firstCompatible = opt.value;
+    }
+  });
+
+  if (phpMin && phpSelect.selectedOptions.length > 0 && phpSelect.selectedOptions[0].disabled && firstCompatible !== null) {
+    phpSelect.value = firstCompatible;
+  }
+  warning.classList.toggle('d-none', !phpMin || anyCompatible);
+}
+
+function phpVersionCompatible(version, min, max) {
+  if (phpVersionCompare(version, min) < 0) return false;
+  if (max && phpVersionCompare(version, max) > 0) return false;
+  return true;
+}
+
+function phpVersionCompare(a, b) {
+  var pa = a.split('.').map(Number);
+  var pb = b.split('.').map(Number);
+  for (var i = 0; i < Math.max(pa.length, pb.length); i++) {
+    var diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+document.getElementById('installAppVersionSelect').addEventListener('change', function () {
+  var slug = document.getElementById('installAppSlug').value;
+  var btn = document.querySelector('[data-slug="' + slug + '"][data-bs-target="#installAppModal"]');
+  if (btn) filterPhpVersionsForApp(btn);
 });
 </script>
 <?php endif; ?>

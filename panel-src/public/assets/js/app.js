@@ -25,6 +25,47 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Generic show/hide toggle for a <input type=password> field (as
+  // opposed to data-toggle-secret above, which toggles a masked <span> of
+  // an already-known stored value).
+  document.querySelectorAll('[data-toggle-password-input]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = document.getElementById(btn.getAttribute('data-toggle-password-input'));
+      if (!target) return;
+      var show = target.type === 'password';
+      target.type = show ? 'text' : 'password';
+      btn.innerHTML = show ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+    });
+  });
+
+  // Generic "generate a strong random password into this field" button.
+  // Uses crypto.getRandomValues (not Math.random, which is not
+  // cryptographically secure) and reveals the field (type=text) so the
+  // admin can see/copy what was just generated before submitting.
+  document.querySelectorAll('[data-generate-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = document.getElementById(btn.getAttribute('data-generate-password'));
+      if (!target) return;
+      target.type = 'text';
+      target.value = generateStrongPassword();
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      var toggleBtn = document.querySelector('[data-toggle-password-input="' + target.id + '"]');
+      if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+    });
+  });
+
+  function generateStrongPassword(length) {
+    length = length || 20;
+    var charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#%^&*-_+=';
+    var values = new Uint32Array(length);
+    (window.crypto || window.msCrypto).getRandomValues(values);
+    var out = '';
+    for (var i = 0; i < length; i++) {
+      out += charset[values[i] % charset.length];
+    }
+    return out;
+  }
+
   // Generic "copy to clipboard" button
   document.querySelectorAll('[data-copy]').forEach(function (btn) {
     btn.addEventListener('click', function () {

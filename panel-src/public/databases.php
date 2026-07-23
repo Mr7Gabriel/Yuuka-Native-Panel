@@ -144,7 +144,10 @@ include __DIR__ . '/partials/header.php';
           </div>
           <div class="mb-3">
             <label class="form-label">Password</label>
-            <input type="text" name="db_password" class="form-control" minlength="8" required>
+            <div class="input-group">
+              <input type="text" name="db_password" id="createDbPassword" class="form-control" minlength="8" required>
+              <button type="button" class="btn btn-outline-secondary" data-generate-password="createDbPassword" title="Generate password acak"><i class="bi bi-magic"></i></button>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Catatan (opsional)</label>
