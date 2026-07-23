@@ -130,7 +130,14 @@ location ^~ /phpmyadmin/ {
     location ~ ^/phpmyadmin/(.+\\.php)\$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:${sock};
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        # \$document_root does NOT reliably resolve to the parent
+        # location's 'alias' target inside a nested regex location block -
+        # this is a well-known nginx gotcha (alias + nested PHP location)
+        # that leaves PHP-FPM with an empty/wrong path, hence
+        # 'No input file specified.'. PHPMYADMIN_ROOT is known at config
+        # generation time, so it is hardcoded here instead of relying on
+        # nginx to resolve it at request time.
+        fastcgi_param SCRIPT_FILENAME ${PHPMYADMIN_ROOT}/\$1;
         fastcgi_param SCRIPT_NAME /phpmyadmin/\$1;
     }
 
