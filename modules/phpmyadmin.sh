@@ -115,6 +115,14 @@ module_phpmyadmin_generate_nginx() {
     else
         conf_name="phpmyadmin-path-${domain}"
         conf_content="# Included from the site's server block via 'include' if desired.
+# Bare '/phpmyadmin' (no trailing slash) does NOT match the ^~ /phpmyadmin/
+# prefix location below - without this exact-match redirect it silently
+# falls through to the site's own catch-all location (e.g. the panel's
+# own index.php), which looks like phpMyAdmin 'redirects to the dashboard'.
+location = /phpmyadmin {
+    return 301 /phpmyadmin/;
+}
+
 location ^~ /phpmyadmin/ {
     alias ${PHPMYADMIN_ROOT}/;
     index index.php;
