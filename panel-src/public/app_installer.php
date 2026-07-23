@@ -160,7 +160,7 @@ include __DIR__ . '/partials/header.php';
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Domain</label>
-              <input type="text" name="domain" class="form-control" placeholder="contoh.com" required pattern="^[a-zA-Z0-9.-]+$">
+              <input type="text" name="domain" class="form-control" placeholder="contoh.com" required pattern="^[a-zA-Z0-9.\-]+$">
               <div class="form-text">Website baru akan dibuat otomatis di domain ini.</div>
             </div>
             <div class="col-md-6">
@@ -222,30 +222,54 @@ document.getElementById('installAppModal').addEventListener('show.bs.modal', fun
   var tier = btn.getAttribute('data-tier');
   var requiresDb = btn.getAttribute('data-requires-db') === '1';
 
+  // Reset first - a field hidden via CSS is NOT automatically excluded
+  // from HTML5 constraint validation (only `disabled` or the `hidden`
+  // attribute reliably are), so a stale value typed for a previous
+  // app/tier selection can silently block submission later with a
+  // console-only "not focusable" error and no visible feedback. Resetting
+  // on every open, plus explicitly disabling whatever stays hidden below,
+  // closes both paths.
+  this.querySelector('form').reset();
+
   document.getElementById('installAppSlug').value = slug;
   document.getElementById('installAppName').textContent = btn.getAttribute('data-name');
 
-  document.getElementById('installZipField').style.display = (slug === 'custom') ? '' : 'none';
+  var zipField = document.getElementById('installZipField');
+  var zipInput = zipField.querySelector('input[name="app_zip"]');
+  var showZip = (slug === 'custom');
+  zipField.style.display = showZip ? '' : 'none';
+  zipInput.disabled = !showZip;
+
   document.getElementById('installFullTierNote').style.display = (tier === 'full') ? '' : 'none';
 
   var dbFields = document.getElementById('installDbFields');
+  var dbDetailFields = document.getElementById('installDbDetailFields');
   var createDbCheckbox = document.getElementById('installCreateDb');
+  var dbInputs = dbDetailFields.querySelectorAll('input');
+
   if (tier === 'full') {
     dbFields.style.display = 'none';
     createDbCheckbox.checked = false;
+    createDbCheckbox.disabled = true;
+    dbInputs.forEach(function (el) { el.disabled = true; });
   } else if (requiresDb) {
     dbFields.style.display = '';
     createDbCheckbox.checked = true;
     createDbCheckbox.disabled = true;
+    dbInputs.forEach(function (el) { el.disabled = false; });
   } else {
     dbFields.style.display = '';
     createDbCheckbox.checked = false;
     createDbCheckbox.disabled = false;
+    dbInputs.forEach(function (el) { el.disabled = true; });
   }
-  document.getElementById('installDbDetailFields').style.display = createDbCheckbox.checked ? '' : 'none';
+  dbDetailFields.style.display = createDbCheckbox.checked ? '' : 'none';
 });
 document.getElementById('installCreateDb').addEventListener('change', function () {
-  document.getElementById('installDbDetailFields').style.display = this.checked ? '' : 'none';
+  var dbDetailFields = document.getElementById('installDbDetailFields');
+  var show = this.checked;
+  dbDetailFields.style.display = show ? '' : 'none';
+  dbDetailFields.querySelectorAll('input').forEach(function (el) { el.disabled = !show; });
 });
 </script>
 <?php endif; ?>

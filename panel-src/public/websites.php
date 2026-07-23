@@ -141,7 +141,7 @@ include __DIR__ . '/partials/header.php';
           <input type="hidden" name="action" value="create">
           <div class="mb-3">
             <label class="form-label">Domain</label>
-            <input type="text" name="domain" class="form-control" placeholder="contoh.com" required pattern="^[a-zA-Z0-9.-]+$">
+            <input type="text" name="domain" class="form-control" placeholder="contoh.com" required pattern="^[a-zA-Z0-9.\-]+$">
           </div>
           <div class="mb-3">
             <label class="form-label">Versi PHP</label>
