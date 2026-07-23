@@ -41,10 +41,20 @@ foreach ($live as $row) {
 // Only fetched/decrypted for roles that can actually manage databases -
 // a Viewer (read-only monitoring by design) must not be able to read or
 // copy a raw credential that grants full read-write MariaDB access.
+// Wrapped defensively: DbCredentialsStore throws if the sqlite3 PHP
+// extension isn't installed (see its own guard) - a missing module on the
+// server must degrade this page to "password tidak tersedia" per row
+// (same fallback already shown for pre-existing rows with no stored
+// credential), not take down the whole Database menu with a 500.
 $credentialsMap = [];
 if (Rbac::can($user['role'], 'database.manage')) {
-    foreach ($registry as $db) {
-        $credentialsMap[$db['db_name']] = DbCredentialsStore::get($db['db_name']);
+    try {
+        foreach ($registry as $db) {
+            $credentialsMap[$db['db_name']] = DbCredentialsStore::get($db['db_name']);
+        }
+    } catch (RuntimeException $e) {
+        $credentialsMap = [];
+        flash('error', $e->getMessage());
     }
 }
 

@@ -21,6 +21,16 @@ final class DbCredentialsStore
             return self::$pdo;
         }
 
+        // Checked explicitly (rather than letting `new PDO('sqlite:...')`
+        // throw and relying on its exact message text) so callers - App
+        // Installer, the Database menu, WP Manager - can show an
+        // actionable message instead of a raw "could not find driver"
+        // PDOException on a server where the sqlite3 PHP extension was
+        // never installed for the panel's PHP-FPM pool version.
+        if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+            throw new RuntimeException('Modul PHP sqlite3 belum terpasang di server ini - silakan install modul sqlite3 untuk melanjutkan (jalankan "sudo yp custom-build php" lalu ulangi).');
+        }
+
         $path = APP_PATH . '/storage/db_credentials.sqlite';
         $pdo = new PDO('sqlite:' . $path);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
