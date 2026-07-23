@@ -28,8 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Login - Yuuka Server Panel</title>
 <script>
 (function () {
-  var saved = localStorage.getItem('yuuka-theme');
-  var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  var theme = localStorage.getItem('yuuka-theme') || 'light';
   document.documentElement.setAttribute('data-bs-theme', theme);
 })();
 </script>

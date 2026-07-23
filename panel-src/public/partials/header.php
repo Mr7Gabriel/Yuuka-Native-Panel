@@ -16,8 +16,7 @@ $currentUser = Auth::user();
 // toggle button in the topbar, see app.js), falling back to the OS/browser
 // preference on a first visit that hasn't chosen yet.
 (function () {
-  var saved = localStorage.getItem('yuuka-theme');
-  var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  var theme = localStorage.getItem('yuuka-theme') || 'light';
   document.documentElement.setAttribute('data-bs-theme', theme);
 })();
 </script>

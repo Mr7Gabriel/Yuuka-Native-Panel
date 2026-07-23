@@ -30,6 +30,17 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
+/* Many pages use Bootstrap's .bg-white utility on card-header/breadcrumb
+   elements to make them stand out against the light gray body background
+   in light mode - but .bg-white is a fixed literal-white utility, NOT
+   theme-aware like .text-bg-* helpers, so it stayed bright white in dark
+   mode against now-light-colored text, killing contrast. Re-point it at
+   Bootstrap's own dark-mode surface/text variables instead. */
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--bs-tertiary-bg) !important;
+  color: var(--bs-body-color);
+}
+
 .app-shell {
   display: flex;
   min-height: 100vh;
